@@ -1,0 +1,880 @@
+Global Hwnd//窗口句柄
+//窗口宽 1136 窗口高 640
+Global ScreenW	//屏幕宽
+Global ScreenH	//屏幕高
+Global threadID	//总线程ID
+Global nowTime//现在时间
+//时间
+Global shijunexttime	//下次石距时间
+Global shijucoldtime	//石距当前冷却时间
+Global shijuflag	//自动打石距开关
+shijucoldtime = 0	//石距当前冷却时间默认为0。
+shijuflag = 0//石距执行标志位默认为0，不执行。
+//金币
+Global jinbinexttime	//下次金币时间
+Global jinbicoldtime	//金币当前冷却时间
+Global jinbiflag	//自动打金币开关
+jinbicoldtime = 0	//金币当前冷却时间默认为0。
+jinbiflag = 0//金币执行标志位默认为0，不执行。
+//经验
+Global jingyannexttime	//下次经验时间
+Global jingyancoldtime	//经验当前冷却时间
+Global jingyanflag	//自动打经验开关
+jingyancoldtime = 0	//经验当前冷却时间默认为0。
+jingyanflag = 0//经验执行标志位默认为0，不执行。
+//年兽
+Global nianshounexttime	//下次年兽时间
+Global nianshoucoldtime	//年兽当前冷却时间
+Global nianshouflag	//自动打年兽开关
+nianshoucoldtime = 0	//年兽当前冷却时间默认为0。
+nianshouflag = 0//年兽执行标志位默认为0，不执行。
+//签到
+Global qiandaoflag	//自动签到开关
+Global qiandaonexttime	//下次签到时间
+qiandaoflag = 0
+//领取勾玉
+Global linggouyuflag	//自动领取勾玉开关
+linggouyuflag = 0
+//窗体载入函数
+Event Main.Load
+    //程序启动之初，获取屏幕大小
+    ScreenW = Plugin.GetSysInfo.GetScreenResolutionX() 
+    ScreenH = Plugin.GetSysInfo.GetScreenResolutionY()
+    //程序启动之初，判定是否运行了阴阳师，并将其大小进行调整
+    HwndEx = Plugin.Window.Search("阴阳师-网易游戏")//模糊查找，查到阴阳师的窗体
+    Dim MyHwndArray
+    MyHwndArray = Split(HwndEx, "|")
+    If UBound(MyHwndArray) >= 0 Then 
+        Hwnd = MyHwndArray(0)//得到窗口句柄
+        Call Plugin.Window.SetClientSize(Hwnd, 1136, 640)//对窗体进行归一化处理
+        Main.ibrz.Text = "初始化结束" & vbcrlf & Main.ibrz.Text
+    Else
+        MsgBox "未打开阴阳师桌面版,请打开阴阳师桌面版后运行此软件！！！"
+        HwndEx = Plugin.Window.Search("阴阳师辅助")//模糊查找，查到阴阳师的窗体
+        Dim MyHwndArray2
+        MyHwndArray2 = Split(HwndEx, "|")
+        Hwnd = MyHwndArray2(0)//得到窗口句柄
+        Call Plugin.Memory.TerminateProc(Hwnd)  
+    End If
+End Event
+//辅助开始函数
+Event Main.btstart.Click
+    If Main.btstart.Caption = "开始" Then 	//单击开始，打开线程
+        Main.btSetShiJu.Enabled = False
+        Main.btSetJinBi.Enabled = False
+        Main.btSetJingYan.Enabled = False
+        Main.btSetNianShou.Enabled = False
+        Main.btSetQianDao.Enabled = False
+        Main.btSetLingQuGouYu.Enabled = False
+        threadID = BeginThread(总线程)
+        Main.btstart.Caption = "关闭"
+    Else 									//单击结束，关闭线程
+        StopThread (threadID)
+        Main.btSetShiJu.Enabled = True
+        Main.btSetJinBi.Enabled = True
+        Main.btSetJingYan.Enabled = True
+        Main.btSetNianShou.Enabled = True
+        Main.btSetQianDao.Enabled = True
+        Main.btSetLingQuGouYu.Enabled = True
+        Call Plugin.Window.Top(Hwnd, 1)
+        Main.btstart.Caption = "开始"
+    End If
+End Event
+//石距冷却时间输入框函数
+Event Main.ShiJuTime.Change
+    shijucoldtime = CInt(Main.ShiJuTime.Text)
+End Event
+//自动石距按钮函数
+Event Main.btSetShiJu.Click
+    If Main.btSetShiJu.Caption = "打开自动石距" Then 
+        Main.ShiJuTime.Enabled = False     		//将冷却时间框置为不可用
+        Main.btSetShiJu.Caption = "关闭自动石距"//将按钮的名称更改
+        shijunexttime = DateAdd("n", shijucoldtime, Plugin.GetSysInfo.GetDateTime)//计算下次应当进行石距的时间
+        //MessageBox shijunexttime
+        shijuflag = 1		//设定标志位，在线程中控制执行相应操作
+    Else 
+        //设定标志位，在线程中控制不执行相应操作
+        shijuflag = 0
+        Main.ShiJuTime.Enabled = True     		//将冷却时间框置为可用
+        Main.btSetShiJu.Caption = "打开自动石距"  
+    End If
+End Event
+//金币冷却时间输入框函数
+Event Main.JinBiTime.Change
+	jinbicoldtime = CInt(Main.JinBiTime.Text)
+End Event
+//自动金币按钮函数
+Event Main.btSetJinBi.Click
+	If Main.btSetJinBi.Caption = "打开自动金币" Then 
+        Main.JinBiTime.Enabled = False     		//将冷却时间框置为不可用
+        Main.btSetJinBi.Caption = "关闭自动金币"//将按钮的名称更改
+        jinbinexttime = DateAdd("n", jinbicoldtime, Plugin.GetSysInfo.GetDateTime)//计算下次应当进行金币的时间
+        //MessageBox shijunexttime
+        jinbiflag = 1		//设定标志位，在线程中控制执行相应操作
+    Else 
+        //设定标志位，在线程中控制不执行相应操作
+        jinbiflag = 0
+        Main.JinBiTime.Enabled = True     		//将冷却时间框置为可用
+        Main.btSetJinBi.Caption = "打开自动金币"  
+    End If
+End Event
+//经验冷却时间输入框函数
+Event Main.JingYanTime.Change
+	jingyancoldtime = CInt(Main.JingYanTime.Text)
+End Event
+//自动经验按钮函数
+Event Main.btSetJingYan.Click
+	If Main.btSetJingYan.Caption = "打开自动经验" Then 
+        Main.JingYanTime.Enabled = False     		//将冷却时间框置为不可用
+        Main.btSetJingYan.Caption = "关闭自动经验"//将按钮的名称更改
+        jingyannexttime = DateAdd("n", jingyancoldtime, Plugin.GetSysInfo.GetDateTime)//计算下次应当进行经验的时间
+        //MessageBox shijunexttime
+        jingyanflag = 1		//设定标志位，在线程中控制执行相应操作
+    Else 
+        //设定标志位，在线程中控制不执行相应操作
+        jingyanflag = 0
+        Main.JingYanTime.Enabled = True     		//将冷却时间框置为可用
+        Main.btSetJingYan.Caption = "打开自动经验"  
+    End If
+End Event
+//年兽冷却时间输入框函数
+Event Main.NianShouTime.Change
+	nianshoucoldtime = CInt(Main.NianShouTime.Text)
+End Event
+//自动年兽按钮函数
+Event Main.btSetNianShou.Click
+	If Main.btSetNianShou.Caption = "打开自动年兽" Then 
+        Main.NianShouTime.Enabled = False     		//将冷却时间框置为不可用
+        Main.btSetNianShou.Caption = "关闭自动年兽"//将按钮的名称更改
+        nianshounexttime = DateAdd("n", nianshoucoldtime, Plugin.GetSysInfo.GetDateTime)//计算下次应当进行年兽的时间
+        //MessageBox shijunexttime
+        nianshouflag = 1		//设定标志位，在线程中控制执行相应操作
+    Else 
+        //设定标志位，在线程中控制不执行相应操作
+        nianshouflag = 0
+        Main.NianShouTime.Enabled = True     		//将冷却时间框置为可用
+        Main.btSetNianShou.Caption = "打开自动年兽"  
+    End If
+End Event
+
+//自动签到按钮函数
+Event Main.btSetQianDao.Click
+    If Main.btSetQianDao.Caption = "打开自动签到" Then 
+        qiandaoflag = 1
+        //
+        If Main.obSetQianDao1.Value = 1 Then  
+        	qiandaonexttime = DateAdd("d",1,now)	//计算下次应当签到的时间
+    	ElseIf Main.obSetQianDao2.Value = 1 Then
+        	qiandaonexttime = now //计算下次应当签到的时间
+    	End If  
+        Main.btSetQianDao.Caption = "关闭自动签到"
+    Else 
+        qiandaoflag = 0
+        Main.btSetQianDao.Caption = "打开自动签到"
+    End If
+End Event
+//自动领取勾玉按钮函数
+Event Main.btSetLingQuGouYu.Click
+	If Main.btSetLingQuGouYu.Caption = "打开自动领取勾玉" Then 
+        linggouyuflag = 1
+        Main.btSetLingQuGouYu.Caption = "关闭自动领取勾玉"
+    Else 
+        linggouyuflag = 0
+        Main.btSetLingQuGouYu.Caption = "打开自动领取勾玉"
+    End If
+End Event
+//总线程，控制任务自动进行
+Sub 总线程()
+    //获取当前系统时间
+    While 1
+        Main.ibrz.Text = now & "检查时间中......" & vbcrlf & Main.ibrz.Text
+        //自动打石距
+        If shijuflag = 1 and Datecmp(shijunexttime, now) Then 
+            //判定当前是否已经过去此时间节点，并进行相应操作
+            打石距 //打完石距
+        End If
+        //自动打金币
+        If jinbiflag = 1 and Datecmp(jinbinexttime, now) Then 
+            //判定当前是否已经过去此时间节点，并进行相应操作
+            打金币 //打完石距
+        End If
+        //自动打经验
+        If jingyanflag = 1 and Datecmp(jingyannexttime, now) Then 
+            //判定当前是否已经过去此时间节点，并进行相应操作
+            打经验 //打完石距
+        End If
+        //自动打年兽
+        If nianshouflag = 1 and Datecmp(nianshounexttime, now) Then 
+            //判定当前是否已经过去此时间节点，并进行相应操作
+            打年兽 //打完石距
+        End If
+        
+        //自动签到
+        If qiandaoflag = 1 and Datecmp(qiandaonexttime, now) Then 
+            签到
+        End If
+        If linggouyuflag = 1 Then 
+        	领勾玉
+        End If
+        Delay 20000//延时5分钟
+    Wend
+End Sub
+//比较两个日期的大小theDate1为应该的时间，theDate2为当前时间
+Function Datecmp(theDate1,theDate2)
+    //两个日期的大小在比较的时候，首先从年开始，接下来是月、日、时、分、秒
+    If DateDiff("yyyy", theDate1, theDate2) < 0 Then 
+        Datecmp = False
+    ElseIf Datediff("m", theDate1, theDate2) < 0 Then
+        Datecmp = False
+    ElseIf Datediff("d", theDate1, theDate2) < 0 Then
+        Datecmp = False
+    ElseIf Datediff("h", theDate1, theDate2) < 0 Then
+        Datecmp = False
+    ElseIf Datediff("n", theDate1, theDate2) < 0 Then
+        Datecmp = False
+    ElseIf Datediff("s", theDate1, theDate2) < 0 Then
+        Datecmp = False
+    Else 
+        Datecmp = True
+    End If
+End Function
+//
+Function 悬赏封印邀请()
+	//拒绝接受
+	FindPic 0, 0, ScreenW, ScreenH, "Attachment:\悬赏封印邀请.bmp", 0.9, intX, intY
+	If intX < 0 And intY < 0 Then 
+        correctMsg = "没有悬赏封印邀请，正常进行下一步"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Goto 结束
+    End If
+    //接受
+    //Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 260, intY - 30 + 260)
+    //拒接
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 260, intY - 30 + 350)
+    correctMsg = "有悬赏封印邀请，已经拒接，正常进行下一步"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Rem 结束
+    
+End Function
+//打一次石距函数
+Function 打石距()
+    //
+    //控制窗口显示并置顶，待结束后窗口取消置顶
+    Call Plugin.Window.Show(Hwnd)
+    Call Plugin.Window.Top(Hwnd, 0)
+    Call Plugin.Window.Move(Hwnd, 0, 0)
+    Delay 1000
+    //拒接悬赏封印邀请
+    悬赏封印邀请
+    //
+    Rem 寻找组队
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then 
+        errorMsg = "寻找组队面板失败，请检查是否处于最初界面，本次石距攻打未成功"
+        Goto 打石距失败
+    End If
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 32, intY - 30 + 46)
+    correctMsg = "打开组队面板成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    Rem 寻找全部
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-全部.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        errorMsg = "寻找全部面板失败，本次石距攻打未成功"
+        Goto 打石距失败
+    End If
+    Call Plugin.Bkgnd.LeftDown(Hwnd, intX + 118, intY - 30 + 400)
+    Call Plugin.Bkgnd.MoveTo(Hwnd, intX + 118, 0)
+    Call Plugin.Bkgnd.LeftUp(Hwnd, intX + 118, 0)
+    correctMsg = "打开全部面板成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    Rem 寻找石距
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-石距.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        errorMsg = "寻找石距按钮失败，本次石距攻打未成功"
+        Goto 打石距失败
+    End If
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 87, intY - 30 + 29)
+    correctMsg = "打开石距按钮成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    Rem 寻找自动匹配
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-自动匹配.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        errorMsg = "寻找自动匹配按钮失败，本次石距攻打未成功"
+        Goto 打石距失败
+    End If
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 80, intY - 30 + 29)
+    correctMsg = "打开自动匹配按钮成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    //自动匹配已经开始了，此时应当检测 取消匹配是否存在，如果存在说明还没有进入
+    Rem 寻找取消匹配
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-取消匹配.bmp",0.9,intX,intY
+    If intX > 0 And intY > 0 Then 
+        correctMsg = "寻找取消匹配成功，等待中"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Goto 寻找取消匹配
+    End If
+    correctMsg = "进入队伍"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    //
+    //找不到组队-取消匹配，说明应当检测是否有组队-开始战斗以及组队-离开队伍
+    Rem 寻找离开队伍
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-离开队伍.bmp",0.9,intX,intY
+    If intX > 0 And intY > 0 Then	//找到了组队-离开队伍，说明应当一直检测是否有组队-开始战斗
+        Rem 寻找开始战斗
+        FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-开始战斗.bmp",0.9,intX,intY
+        If intX > 0 And intY > 0 Then //找到了组队-开始战斗
+            Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 60, intY - 30 + 21)
+            correctMsg = "开始战斗"
+            Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+            Delay 1000
+            Goto 寻找准备
+        Else //没有找到组队-开始战斗
+            Delay 1000//延迟1秒后跳转到寻找离开队伍
+            correctMsg = "仍处于队伍中"
+            Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+            Goto 寻找离开队伍
+        End If
+    Else	//没有找到离开队伍
+        correctMsg = "进入石距副本攻打中"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Goto 寻找准备
+    End If
+    //  
+    Rem 寻找准备 
+   	//寻找准备一直不成功，因为是动态的图，所以可以考虑固定位置点击
+    Rem 寻找结束
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-石距-结束.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        correctMsg = "寻找结束失败，石距副本攻打中"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Goto 寻找结束
+    Else 
+        correctMsg = "寻找结束成功，石距副本攻打结束"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Call Plugin.Bkgnd.LeftClick(Hwnd, intX, intY - 30)
+    End If
+    Delay 20000//延时20秒
+    //
+    Rem 寻找结束确认
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-石距-结束.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then	//找不到结束图
+        correctMsg = "确认石距副本结束"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Goto 打石距成功
+    Else 
+        correctMsg = "确认石距副本结束失败，重新点击"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Call Plugin.Bkgnd.LeftClick(Hwnd, intX, intY - 30)
+        Goto 打石距成功
+    End If
+    Rem 打石距失败
+    //显示石距失败信息
+    Main.ibrz.Text = now & ">>>>>>" & errorMsg & "!!!!!!" & vbcrlf & Main.ibrz.Text
+    Goto 结束
+    Rem 打石距成功
+    correctMsg = "石距副本攻打完美结束！"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    shijunexttime = DateAdd("h", 1, now)//计算下次应当进行石距的时间
+    shijunexttime = DateAdd("n", 1, shijunexttime)
+    correctMsg = "石距副本完美结束！"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Rem 结束
+    //
+    //石距结束，结束后把窗体取消置顶
+    Call Plugin.Window.Top(Hwnd, 1)
+End Function
+Function 打鬼王()
+
+End Function
+Function 打金币()
+//
+    //控制窗口显示并置顶，待结束后窗口取消置顶
+    Call Plugin.Window.Show(Hwnd)
+    Call Plugin.Window.Top(Hwnd, 0)
+    Call Plugin.Window.Move(Hwnd, 0, 0)
+    Delay 1000
+    //拒接悬赏封印邀请
+    悬赏封印邀请
+    //
+    Rem 寻找组队
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then 
+        errorMsg = "寻找组队面板失败，请检查是否处于最初界面，本次金币妖怪攻打未成功"
+        Goto 打金币妖怪失败
+    End If
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 32, intY - 30 + 46)
+    correctMsg = "打开组队面板成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    Rem 寻找全部
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-全部.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        errorMsg = "寻找全部面板失败，本次金币妖怪攻打未成功"
+        Goto 打金币妖怪失败
+    End If
+    Call Plugin.Bkgnd.LeftDown(Hwnd, intX + 118, intY - 30 + 400)
+    Call Plugin.Bkgnd.MoveTo(Hwnd, intX + 118, 0)
+    Call Plugin.Bkgnd.LeftUp(Hwnd, intX + 118, 0)
+    correctMsg = "打开全部面板成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    Rem 寻找金币妖怪
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-金币妖怪.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        errorMsg = "寻找金币妖怪按钮失败，本次石距攻打未成功"
+        Goto 打金币妖怪失败
+    End If
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 87, intY - 30 + 29)
+    correctMsg = "打开金币妖怪按钮成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    Rem 寻找自动匹配
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-自动匹配.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        errorMsg = "寻找自动匹配按钮失败，本次金币妖怪攻打未成功"
+        Goto 打金币妖怪失败
+    End If
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 80, intY - 30 + 29)
+    correctMsg = "打开自动匹配按钮成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    //自动匹配已经开始了，此时应当检测 取消匹配是否存在，如果存在说明还没有进入
+    Rem 寻找取消匹配
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-取消匹配.bmp",0.9,intX,intY
+    If intX > 0 And intY > 0 Then 
+        correctMsg = "寻找取消匹配成功，等待中"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Goto 寻找取消匹配
+    End If
+    correctMsg = "进入队伍"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    //
+    //找不到组队-取消匹配，说明应当检测是否有组队-开始战斗以及组队-离开队伍
+    Rem 寻找离开队伍
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-离开队伍.bmp",0.9,intX,intY
+    If intX > 0 And intY > 0 Then	//找到了组队-离开队伍，说明应当一直检测是否有组队-开始战斗
+        Rem 寻找开始战斗
+        FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-开始战斗.bmp",0.9,intX,intY
+        If intX > 0 And intY > 0 Then //找到了组队-开始战斗
+            Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 60, intY - 30 + 21)
+            correctMsg = "开始战斗"
+            Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+            Delay 1000
+            Goto 寻找准备
+        Else //没有找到组队-开始战斗
+            Delay 1000//延迟1秒后跳转到寻找离开队伍
+            correctMsg = "仍处于队伍中"
+            Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+            Goto 寻找离开队伍
+        End If
+    Else	//没有找到离开队伍
+        correctMsg = "进入金币妖怪副本攻打中"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Goto 寻找准备
+    End If
+    //  
+    Rem 寻找准备 
+   	//寻找准备一直不成功，因为是动态的图，所以可以考虑固定位置点击
+    Rem 寻找结束
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-石距-结束.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        correctMsg = "寻找结束失败，金币妖怪副本攻打中"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Goto 寻找结束
+    Else 
+        correctMsg = "寻找结束成功，金币妖怪副本攻打结束"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Call Plugin.Bkgnd.LeftClick(Hwnd, intX, intY - 30)
+    End If
+    Delay 20000//延时20秒
+    //
+    Rem 寻找结束确认
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-石距-结束.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then	//找不到结束图
+        correctMsg = "确认金币妖怪副本结束"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Goto 打金币妖怪成功
+    Else 
+        correctMsg = "确认金币妖怪副本结束失败，重新点击"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Call Plugin.Bkgnd.LeftClick(Hwnd, intX, intY - 30)
+        Goto 打金币妖怪成功
+    End If
+    Rem 打金币妖怪失败
+    //显示金币妖怪失败信息
+    Main.ibrz.Text = now & ">>>>>>" & errorMsg & "!!!!!!" & vbcrlf & Main.ibrz.Text
+    Goto 结束
+    Rem 打金币妖怪成功
+    correctMsg = "金币妖怪副本攻打完美结束！"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    jinbinexttime = DateAdd("h", 6, now)//计算下次应当进行金币妖怪的时间
+    jinbinexttime = DateAdd("n", 1, jinbinexttime)
+    correctMsg = "金币妖怪副本完美结束！"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Rem 结束
+    //
+    //金币妖怪结束，结束后把窗体取消置顶
+    Call Plugin.Window.Top(Hwnd, 1)
+End Function
+Function 打经验()
+//控制窗口显示并置顶，待结束后窗口取消置顶
+    Call Plugin.Window.Show(Hwnd)
+    Call Plugin.Window.Top(Hwnd, 0)
+    Call Plugin.Window.Move(Hwnd, 0, 0)
+    Delay 1000
+    //拒接悬赏封印邀请
+    悬赏封印邀请
+    //
+    Rem 寻找组队
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then 
+        errorMsg = "寻找组队面板失败，请检查是否处于最初界面，本次经验妖怪攻打未成功"
+        Goto 打经验妖怪失败
+    End If
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 32, intY - 30 + 46)
+    correctMsg = "打开组队面板成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    Rem 寻找全部
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-全部.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        errorMsg = "寻找全部面板失败，本次经验妖怪攻打未成功"
+        Goto 打经验妖怪失败
+    End If
+    Call Plugin.Bkgnd.LeftDown(Hwnd, intX + 118, intY - 30 + 400)
+    Call Plugin.Bkgnd.MoveTo(Hwnd, intX + 118, 0)
+    Call Plugin.Bkgnd.LeftUp(Hwnd, intX + 118, 0)
+    correctMsg = "打开全部面板成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    Rem 寻找经验妖怪
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-经验妖怪.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        errorMsg = "寻找经验妖怪按钮失败，本次石距攻打未成功"
+        Goto 打经验妖怪失败
+    End If
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 87, intY - 30 + 29)
+    correctMsg = "打开经验妖怪按钮成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    Rem 寻找自动匹配
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-自动匹配.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        errorMsg = "寻找自动匹配按钮失败，本次经验妖怪攻打未成功"
+        Goto 打经验妖怪失败
+    End If
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 80, intY - 30 + 29)
+    correctMsg = "打开自动匹配按钮成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    //自动匹配已经开始了，此时应当检测 取消匹配是否存在，如果存在说明还没有进入
+    Rem 寻找取消匹配
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-取消匹配.bmp",0.9,intX,intY
+    If intX > 0 And intY > 0 Then 
+        correctMsg = "寻找取消匹配成功，等待中"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Goto 寻找取消匹配
+    End If
+    correctMsg = "进入队伍"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    //
+    //找不到组队-取消匹配，说明应当检测是否有组队-开始战斗以及组队-离开队伍
+    Rem 寻找离开队伍
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-离开队伍.bmp",0.9,intX,intY
+    If intX > 0 And intY > 0 Then	//找到了组队-离开队伍，说明应当一直检测是否有组队-开始战斗
+        Rem 寻找开始战斗
+        FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-开始战斗.bmp",0.9,intX,intY
+        If intX > 0 And intY > 0 Then //找到了组队-开始战斗
+            Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 60, intY - 30 + 21)
+            correctMsg = "开始战斗"
+            Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+            Delay 1000
+            Goto 寻找准备
+        Else //没有找到组队-开始战斗
+            Delay 1000//延迟1秒后跳转到寻找离开队伍
+            correctMsg = "仍处于队伍中"
+            Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+            Goto 寻找离开队伍
+        End If
+    Else	//没有找到离开队伍
+        correctMsg = "进入经验妖怪副本攻打中"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Goto 寻找准备
+    End If
+    //  
+    Rem 寻找准备 
+   	//寻找准备一直不成功，因为是动态的图，所以可以考虑固定位置点击
+    Rem 寻找结束
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-石距-结束.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        correctMsg = "寻找结束失败，经验妖怪副本攻打中"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Goto 寻找结束
+    Else 
+        correctMsg = "寻找结束成功，经验妖怪副本攻打结束"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Call Plugin.Bkgnd.LeftClick(Hwnd, intX, intY - 30)
+    End If
+    Delay 20000//延时20秒
+    //
+    Rem 寻找结束确认
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-石距-结束.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then	//找不到结束图
+        correctMsg = "确认经验妖怪副本结束"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Goto 打经验妖怪成功
+    Else 
+        correctMsg = "确认经验妖怪副本结束失败，重新点击"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Call Plugin.Bkgnd.LeftClick(Hwnd, intX, intY - 30)
+        Goto 打经验妖怪成功
+    End If
+    Rem 打经验妖怪失败
+    //显示经验妖怪失败信息
+    Main.ibrz.Text = now & ">>>>>>" & errorMsg & "!!!!!!" & vbcrlf & Main.ibrz.Text
+    Goto 结束
+    Rem 打经验妖怪成功
+    correctMsg = "经验妖怪副本攻打完美结束！"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    jingyannexttime = DateAdd("h", 6, now)//计算下次应当进行经验妖怪的时间
+    jingyannexttime = DateAdd("n", 1, jingyannexttime)
+    correctMsg = "经验妖怪副本完美结束！"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Rem 结束
+    //
+    //经验妖怪结束，结束后把窗体取消置顶
+    Call Plugin.Window.Top(Hwnd, 1)
+End Function
+Function 打年兽()
+//控制窗口显示并置顶，待结束后窗口取消置顶
+    Call Plugin.Window.Show(Hwnd)
+    Call Plugin.Window.Top(Hwnd, 0)
+    Call Plugin.Window.Move(Hwnd, 0, 0)
+    Delay 1000
+    //拒接悬赏封印邀请
+    悬赏封印邀请
+    //
+    Rem 寻找组队
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then 
+        errorMsg = "寻找组队面板失败，请检查是否处于最初界面，本次年兽攻打未成功"
+        Goto 打年兽失败
+    End If
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 32, intY - 30 + 46)
+    correctMsg = "打开组队面板成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    Rem 寻找全部
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-全部.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        errorMsg = "寻找全部面板失败，本次年兽攻打未成功"
+        Goto 打年兽失败
+    End If
+    Call Plugin.Bkgnd.LeftDown(Hwnd, intX + 118, intY - 30 + 400)
+    Call Plugin.Bkgnd.MoveTo(Hwnd, intX + 118, 0)
+    Call Plugin.Bkgnd.LeftUp(Hwnd, intX + 118, 0)
+    correctMsg = "打开全部面板成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    Rem 寻找年兽
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-年兽.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        errorMsg = "寻找年兽按钮失败，本次石距攻打未成功"
+        Goto 打年兽失败
+    End If
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 87, intY - 30 + 29)
+    correctMsg = "打开年兽按钮成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    Rem 寻找自动匹配
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-自动匹配.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        errorMsg = "寻找自动匹配按钮失败，本次年兽攻打未成功"
+        Goto 打年兽失败
+    End If
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 80, intY - 30 + 29)
+    correctMsg = "打开自动匹配按钮成功"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Delay 1000
+    //
+    //自动匹配已经开始了，此时应当检测 取消匹配是否存在，如果存在说明还没有进入
+    Rem 寻找取消匹配
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-取消匹配.bmp",0.9,intX,intY
+    If intX > 0 And intY > 0 Then 
+        correctMsg = "寻找取消匹配成功，等待中"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Goto 寻找取消匹配
+    End If
+    correctMsg = "进入队伍"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    //
+    //找不到组队-取消匹配，说明应当检测是否有组队-开始战斗以及组队-离开队伍
+    Rem 寻找离开队伍
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-离开队伍.bmp",0.9,intX,intY
+    If intX > 0 And intY > 0 Then	//找到了组队-离开队伍，说明应当一直检测是否有组队-开始战斗
+        Rem 寻找开始战斗
+        FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-开始战斗.bmp",0.9,intX,intY
+        If intX > 0 And intY > 0 Then //找到了组队-开始战斗
+            Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 60, intY - 30 + 21)
+            correctMsg = "开始战斗"
+            Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+            Delay 1000
+            Goto 寻找准备
+        Else //没有找到组队-开始战斗
+            Delay 1000//延迟1秒后跳转到寻找离开队伍
+            correctMsg = "仍处于队伍中"
+            Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+            Goto 寻找离开队伍
+        End If
+    Else	//没有找到离开队伍
+        correctMsg = "进入年兽副本攻打中"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Goto 寻找准备
+    End If
+    //  
+    Rem 寻找准备 
+   	//寻找准备一直不成功，因为是动态的图，所以可以考虑固定位置点击
+    Rem 寻找结束
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-石距-结束.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then
+        correctMsg = "寻找结束失败，年兽副本攻打中"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Goto 寻找结束
+    Else 
+        correctMsg = "寻找结束成功，年兽副本攻打结束"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Call Plugin.Bkgnd.LeftClick(Hwnd, intX, intY - 30)
+    End If
+    Delay 20000//延时20秒
+    //
+    Rem 寻找结束确认
+    FindPic 0,0,ScreenW,ScreenH,"Attachment:\组队-石距-结束.bmp",0.9,intX,intY
+    If intX < 0 And intY < 0 Then	//找不到结束图
+        correctMsg = "确认年兽副本结束"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Delay 1000
+        Goto 打年兽成功
+    Else 
+        correctMsg = "确认年兽副本结束失败，重新点击"
+        Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+        Call Plugin.Bkgnd.LeftClick(Hwnd, intX, intY - 30)
+        Goto 打年兽成功
+    End If
+    Rem 打年兽失败
+    //显示年兽失败信息
+    Main.ibrz.Text = now & ">>>>>>" & errorMsg & "!!!!!!" & vbcrlf & Main.ibrz.Text
+    Goto 结束
+    Rem 打年兽成功
+    correctMsg = "年兽副本攻打完美结束！"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    nianshounexttime = DateAdd("h", 12, now)//计算下次应当进行年兽的时间
+    nianshounexttime = DateAdd("n", 1, nianshounexttime)
+    correctMsg = "年兽副本完美结束！"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Rem 结束
+    //
+    //年兽结束，结束后把窗体取消置顶
+    Call Plugin.Window.Top(Hwnd, 1)
+End Function
+Function 领体力()
+End Function
+Function 领勾玉()
+	//领勾玉的方法，每次都要执行或者不执行。执行的时候，只看屏幕上能不能检测到，不管屏幕是否是最前，因为这个任务优先级没有那么高
+    Call Plugin.Window.Move(Hwnd, 0, 0)
+    //拒接悬赏封印邀请
+    悬赏封印邀请 
+    //
+	FindPic 0, 0, ScreenW, ScreenH, "Attachment:\领取勾玉.bmp", 0.9, intX, intY
+    If intX < 0 And intY < 0 Then	//找不到勾玉图，领取失败
+        errorMsg = "找不到勾玉图，无勾玉可领取，签到失败"
+        Main.ibrz.Text = now & errorMsg & vbcrlf & Main.ibrz.Text
+        Goto 结束
+    End If
+    correctMsg = "找到勾玉图，领取勾玉"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 25, intY - 30 + 25)
+    Delay 1000
+    Call Plugin.Bkgnd.LeftClick(Hwnd, 1, 1)
+    Rem 结束
+    
+End Function
+Function 签到()
+    //控制窗口显示并置顶，待结束后窗口取消置顶
+    Call Plugin.Window.Show(Hwnd)
+    Call Plugin.Window.Top(Hwnd, 0)
+    Call Plugin.Window.Move(Hwnd, 0, 0)
+    //拒接悬赏封印邀请
+    悬赏封印邀请
+    //
+    Rem 寻找签到
+    Delay 1000
+    FindPic 0, 0, ScreenW, ScreenH, "Attachment:\签到.bmp", 0.9, intX, intY
+    If intX < 0 And intY < 0 Then	//找不到签到图
+        errorMsg = "找不到签到图，签到失败"
+        Main.ibrz.Text = now & errorMsg & vbcrlf & Main.ibrz.Text
+        Goto 签到失败
+    End If
+    correctMsg = "找到签到图"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 15, intY - 30 + 15)
+    Delay 2000
+    FindPic 0, 0, ScreenW, ScreenH, "Attachment:\签到-每日一签.bmp", 0.9, intX, intY
+    If intX < 0 And intY < 0 Then	//找不到签到图
+        errorMsg = "找不到签到-每日一签图，签到失败"
+        Main.ibrz.Text = now & errorMsg & vbcrlf & Main.ibrz.Text
+        Goto 签到失败
+    End If
+    correctMsg = "找到签到-每日一签图"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX + 40, intY - 30 + 80)
+    Delay 2000
+    correctMsg = "任意点击一点"
+    Main.ibrz.Text = now & correctMsg & vbcrlf & Main.ibrz.Text
+    Call Plugin.Bkgnd.LeftClick(Hwnd, intX, intY - 30)
+    Rem 签到失败
+    Goto 结束
+    
+    Rem 签到成功
+    qiandaonexttime = DateAdd("d",1,qiandaonexttime)
+    Goto 结束
+    
+    Rem 结束
+    //控制窗口取消置顶
+    Call Plugin.Window.Top(Hwnd, 1)
+End Function
+
+
